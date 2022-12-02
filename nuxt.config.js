@@ -1,9 +1,14 @@
 import colors from 'vuetify/es5/util/colors'
+const fs = require('fs');
+const array = fs.readFileSync('assets/format.csv')
 
 export default {
+  env : {
+    array:array,
+    fs: fs,
+  },
   // Disable server-side rendering: https://go.nuxtjs.dev/ssr-mode
   ssr: false,
-
   // Global page headers: https://go.nuxtjs.dev/config-head
   head: {
     titleTemplate: '%s - scodeDemo',
@@ -25,6 +30,7 @@ export default {
 
   // Plugins to run before rendering page: https://go.nuxtjs.dev/config-plugins
   plugins: [
+    '~/plugins/myplugin',
   ],
 
   // Auto import components: https://go.nuxtjs.dev/config-components
@@ -77,6 +83,18 @@ export default {
   },
 
   // Build Configuration: https://go.nuxtjs.dev/config-build
+  /*
+  外部ライブラリを追加したときに can't resolve 'fs' のエラーが出ることがあります．
+  Node.js をサーバサイドで使うときとは別の対策が必要です．
+  そもそも fs モジュールは Node.js にデフォルトで含まれていて
+  基本的にインストールの必要はなく，フロントサイドで使うときは利用しないそうです．
+  */
   build: {
+    // extend(config, ctx) {
+    //   config.node = {
+    //     fs: 'empty'
+    //   }
+    // }
   }
+
 }

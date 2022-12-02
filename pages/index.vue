@@ -42,6 +42,7 @@
 
 <script>
 import Encoding from  'encoding-japanese';
+import readFile from '~/plugins/myplugin';
 
 export default {
   name: 'IndexPage',
@@ -62,7 +63,14 @@ export default {
           value: 'price'
         }
       ],
+      array: process.env.array,
+      fs: process.env.fs,
     }
+  },
+  mounted() {
+    console.log(readFile('assets/format.csv'))
+    console.log(this.fs);
+    console.log(this.array);
   },
   methods: {
     onFileChange(file) {
@@ -82,7 +90,9 @@ export default {
       return new Promise((resolve, reject) => {
         console.log('get_csv_data');
         const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result.split('\r\n'));
+        reader.onload = (e) => {
+          resolve(e.target.result.split('\r\n'))
+        };
         reader.onerror = () => reject(error);
         reader.readAsText(file);
       })
@@ -90,26 +100,51 @@ export default {
     //文字コードを判定して，UTF-８（BOMあり）に変換する
     changeToUTF(res) {
       return new Promise((resolve)=>{
-        let result = "";
-        console.log(res)
-        for (let i = 1; i < res.length; i++) {
-          result += ","+res[i].split(',');
-        }
-        console.log(result.slice(1,result.length-1))
-        //始めと終わりのコロンを削除した文字列を与えて，文字コードに置き換える
-        let array = result.slice(1,result.length-1).split('').map(v=>v.charCodeAt(v));
-
-        var data = [
-          227, 129, 147, 227, 130, 147, 227, 129, 171, 227, 129, 161, 227, 129, 175
-        ]; // 'こんにちは' array in UTF-8
-
-        let detectedEncoding = Encoding.detect(data); //arrayを入れてもsjis(shiftjisともutf-8とも判定できていない)
-        console.log(detectedEncoding, array);
-        const unicodeArray = Encoding.convert(data, {
-          to: 'UNICODE',
-          from: 'SJIS'
+        const unicodeArray = Encoding.convert(fs.readFileSync(res), {
+          to: 'UTF8',
+          from: 'AUTO'
         });
         console.log(Encoding.codeToString(unicodeArray));
+        this.result = unicodeArray;
+        // let result = "";
+        // console.log(res)
+        // for (let i = 1; i < res.length; i++) {
+        //   result += ","+res[i].split(',');
+        // }
+        
+        // //始めと終わりのコロンを削除した文字列を与えて，文字コードに置き換える
+        // let array = result.slice(1,result.length-1).slice('');
+        // let utfarray = [];
+        // //console.log(array)
+        // let hello = 'こんにちは';
+        // for (let i = 0; i < hello.length; i++) {
+        //   //console.log(array.charCodeAt(i));
+        //   utfarray.push(hello.charCodeAt(i));
+        // }
+        // console.log(utfarray);
+        // //this.result = utfarray;
+
+        // let detectedEncoding = Encoding.detect(utfarray); //arrayを入れてもsjis(shiftjisともutf-8とも判定できていない)
+        // console.log(detectedEncoding);
+        // this.result = detectedEncoding;
+        // if (detectedEncoding==="UTF8") {
+        //   console.log(detectedEncoding);
+        // }
+        // if (detectedEncoding==="sjis") {
+        //   console.log(detectedEncoding);
+        // }
+        // if (detectedEncoding==='UNICODE') {
+        //   console.log(detectedEncoding);
+        // }
+        // else { //sjisの場合
+        //   const unicodeArray = Encoding.convert(utfarray, {
+        //     to: 'UTF8',
+        //     from: 'UNICODE'
+        //   });
+        //   console.log(Encoding.codeToString(unicodeArray));
+        // }
+        
+        
       })
     },
     process_csv_data(res) {
