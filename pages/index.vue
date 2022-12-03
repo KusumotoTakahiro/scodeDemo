@@ -34,7 +34,7 @@
       result: <br/>{{result}}
       <div>
         <br/>
-        ↑入力直後に読み込まれたCSVの文字列がresultに格納される
+        ↑入力直後の文字コード
       </div>
     </div>
   </div>
@@ -47,7 +47,7 @@ export default {
   name: 'IndexPage',
   data() {
     return {
-      result: null,
+      result: "",
       csv_data: null,
       new_csv: [],
       headers: [
@@ -70,75 +70,48 @@ export default {
       if (file) {
         if (file.name.indexOf('.csv') > -1) {
           vm.get_csv_data(file)
-          //.then(vm.changeToUTF)
-          //.then(vm.process_csv_data)
+          .then(vm.process_csv_data)
         }
       }
       else {
         console.log('not in file');
       }
     },
+    //fileデータから文字コードを判定して，UNICODEに変換したファイルデータに置き換える処理．
     get_csv_data(file) {
       return new Promise((resolve, reject) => {
         console.log('get_csv_data');
         const reader = new FileReader();
         reader.onload = (e) => {
-          console.log(e.target.result)
-          var array = new Uint8Array(e.target.result);
-          // 文字コードを取得
-          console.log(array)
-          console.log(Encoding.detect(array))
-          switch (Encoding.detect(array)) {
-          case 'UTF16':
-              // 16ビット符号なし整数値配列と見なす
-              array = new Uint16Array(e.target.result);
-              break;
-          case 'UTF32':
-              // 32ビット符号なし整数値配列と見なす
-              array = new Uint32Array(e.target.result);
-              break;
-          }
-          // Unicodeの数値配列に変換
-          var unicodeArray = Encoding.convert(array, 'UNICODE');
-          // Unicodeの数値配列を文字列に変換
-          var text = Encoding.codeToString(unicodeArray);
-          console.log(text); // 結果
-          // let text = e.target.result.split('\r\n').toString().split(',');
-          // for (let i = 2; i < text.length; i+=2) {
-          //   console.log(text[i]);
-          //   let array = new Uint8Array(text[i])
-          //   console.log(array);
-          //   //let bytes = Encoding.stringToCode(text[i]); //このとき，このテキストが強制的にUNICODEの文字コードに変換されている．
-          //   console.log(Encoding.detect(array));
-
-          // }
-          
-          resolve(e.target.result.split())
+          //readAsArrayBufferによりe.target.resultはバイナリデータ扱いされる．
+          //uint8arrayにより数値配列に変換できる．＝＞detect()で扱える形になるから嬉しいってこと．
+          let codes = new Uint8Array(e.target.result); 
+          let encoding = Encoding.detect(codes);
+          this.result = encoding;
+          let unicodeString = Encoding.convert(codes, {
+            to : 'unicode',
+            from : encoding,
+            type: 'string'
+          });
+          resolve(unicodeString.split(/\r\n|\n/)) //Windowsとmacで改行コードが異なるから．typeはStringになっている
         };
         reader.onerror = () => reject(error);
-        reader.readAsText(file);
+        //上までの記述はイベントに対しての記述であり，実際に最初に実行されるのはこのコードのみ．
+        //reader.readAsText(file); //readerを用いてファイルをTextデータ（おそらくString）として読み取るための関数
+        reader.readAsArrayBuffer(file);  //readerを用いてファイルをBinurryデータとして読み取るための関数
       })
     },
-    //文字コードを判定して，UTF-８（BOMあり）に変換する
-    changeToUTF(res) {
-      return new Promise((resolve)=>{
-        const unicodeArray = Encoding.convert(fs.readFileSync(res), {
-          to: 'UTF8',
-          from: 'AUTO'
-        });
-        console.log(Encoding.codeToString(unicodeArray));
-        this.result = unicodeArray;
-      })
-    },
-    process_csv_data(res) {
+    //get_csv_dataからUNICODEに変換された文字列を受け取り，それをテーブルに渡せる形に成型する．
+    process_csv_data(result) {
       console.log('process_csv_data');
       let vm = this;
-      let result = res;
-      vm.result = result;
+      console.log(result);
       let header = result[0].split(',')
-      result.shift();
-      result.pop();
-      vm.csv_data = result.map(item=>{
+      header = ['content', 'price'];
+      result.shift(); //header分を削除しておく
+      console.log(result);
+      result.pop(); //理由は不明だが，最後に一行だけ空白データが入るので消去
+      vm.new_csv = result.map(item=>{
         let datas = item.split(',');
         let temp = {};
         for (const index in datas) {
@@ -147,17 +120,7 @@ export default {
         }
         return temp;
       })
-    },
-    check_csv() {
-      console.log('check_csv');
-      const vm = this;
-      vm.new_csv = []; //前のデータを空にする
-      //登録の際の記入ミスがないかをチェック
-      console.log(vm.csv_data);
-      vm.csv_data.forEach((data, index) => {
-        data.id = index;
-        this.new_csv.push(data);
-      })
+      console.log(vm.new_csv);
     },
   }
 }
