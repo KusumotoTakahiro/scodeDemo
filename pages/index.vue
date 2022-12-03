@@ -42,7 +42,6 @@
 
 <script>
 import Encoding from  'encoding-japanese';
-import readFile from '~/plugins/myplugin';
 
 export default {
   name: 'IndexPage',
@@ -63,14 +62,7 @@ export default {
           value: 'price'
         }
       ],
-      array: process.env.array,
-      fs: process.env.fs,
     }
-  },
-  mounted() {
-    console.log(readFile('assets/format.csv'))
-    console.log(this.fs);
-    console.log(this.array);
   },
   methods: {
     onFileChange(file) {
@@ -78,7 +70,7 @@ export default {
       if (file) {
         if (file.name.indexOf('.csv') > -1) {
           vm.get_csv_data(file)
-          .then(vm.changeToUTF)
+          //.then(vm.changeToUTF)
           //.then(vm.process_csv_data)
         }
       }
@@ -91,7 +83,37 @@ export default {
         console.log('get_csv_data');
         const reader = new FileReader();
         reader.onload = (e) => {
-          resolve(e.target.result.split('\r\n'))
+          console.log(e.target.result)
+          var array = new Uint8Array(e.target.result);
+          // 文字コードを取得
+          console.log(array)
+          console.log(Encoding.detect(array))
+          switch (Encoding.detect(array)) {
+          case 'UTF16':
+              // 16ビット符号なし整数値配列と見なす
+              array = new Uint16Array(e.target.result);
+              break;
+          case 'UTF32':
+              // 32ビット符号なし整数値配列と見なす
+              array = new Uint32Array(e.target.result);
+              break;
+          }
+          // Unicodeの数値配列に変換
+          var unicodeArray = Encoding.convert(array, 'UNICODE');
+          // Unicodeの数値配列を文字列に変換
+          var text = Encoding.codeToString(unicodeArray);
+          console.log(text); // 結果
+          // let text = e.target.result.split('\r\n').toString().split(',');
+          // for (let i = 2; i < text.length; i+=2) {
+          //   console.log(text[i]);
+          //   let array = new Uint8Array(text[i])
+          //   console.log(array);
+          //   //let bytes = Encoding.stringToCode(text[i]); //このとき，このテキストが強制的にUNICODEの文字コードに変換されている．
+          //   console.log(Encoding.detect(array));
+
+          // }
+          
+          resolve(e.target.result.split())
         };
         reader.onerror = () => reject(error);
         reader.readAsText(file);
@@ -106,45 +128,6 @@ export default {
         });
         console.log(Encoding.codeToString(unicodeArray));
         this.result = unicodeArray;
-        // let result = "";
-        // console.log(res)
-        // for (let i = 1; i < res.length; i++) {
-        //   result += ","+res[i].split(',');
-        // }
-        
-        // //始めと終わりのコロンを削除した文字列を与えて，文字コードに置き換える
-        // let array = result.slice(1,result.length-1).slice('');
-        // let utfarray = [];
-        // //console.log(array)
-        // let hello = 'こんにちは';
-        // for (let i = 0; i < hello.length; i++) {
-        //   //console.log(array.charCodeAt(i));
-        //   utfarray.push(hello.charCodeAt(i));
-        // }
-        // console.log(utfarray);
-        // //this.result = utfarray;
-
-        // let detectedEncoding = Encoding.detect(utfarray); //arrayを入れてもsjis(shiftjisともutf-8とも判定できていない)
-        // console.log(detectedEncoding);
-        // this.result = detectedEncoding;
-        // if (detectedEncoding==="UTF8") {
-        //   console.log(detectedEncoding);
-        // }
-        // if (detectedEncoding==="sjis") {
-        //   console.log(detectedEncoding);
-        // }
-        // if (detectedEncoding==='UNICODE') {
-        //   console.log(detectedEncoding);
-        // }
-        // else { //sjisの場合
-        //   const unicodeArray = Encoding.convert(utfarray, {
-        //     to: 'UTF8',
-        //     from: 'UNICODE'
-        //   });
-        //   console.log(Encoding.codeToString(unicodeArray));
-        // }
-        
-        
       })
     },
     process_csv_data(res) {
